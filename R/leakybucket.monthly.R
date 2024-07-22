@@ -11,8 +11,8 @@
 #' @param syear Start year of simulation.
 #' @param eyear End year of simulation.
 #' @param phi Latitude of site (in degrees N).
-#' @param T (12 x Nyrs) Matrix of ordered mean monthly temperatures (in degEes C).
-#' @param P (12 x Nyrs) Matrix of ordered accumulated monthly precipitation (in mm).
+#' @param Te (12 x Nyrs) Matrix of ordered mean monthly temperatures (in degEes C).
+#' @param Pr (12 x Nyrs) Matrix of ordered accumulated monthly precipitation (in mm).
 #' @param Mmax Scalar maximum soil moisture held by the soil (in v/v).
 #' @param Mmin Scalar minimum soil moisture (for error-catching) (in v/v).
 #' @param alph Scalar runoff parameter 1 (in inverse months).
@@ -30,7 +30,7 @@
 ####################################################################################################
 
 ## LEAKY BUCKET WITHOUT SUBSTEPPING ##
-leakybucket.monthly <- function(syear,eyear,phi,T,P,Mmax = 0.76,Mmin = 0.01,alph = 0.093,
+leakybucket.monthly <- function(syear,eyear,phi,Te,Pr,Mmax = 0.76,Mmin = 0.01,alph = 0.093,
                                 m.th = 4.886,mu.th = 5.8,rootd = 1000,M0 = .2){
   
   iyear <- syear:eyear;
@@ -45,7 +45,7 @@ leakybucket.monthly <- function(syear,eyear,phi,T,P,Mmax = 0.76,Mmin = 0.01,alph
   L <- daylength.factor.from.lat(phi); 
   
   # Pre-calculation of istar and I, using input T to compute the climatology:
-  Tm <- rowMeans(T);
+  Tm <- rowMeans(Te);
   istar <- (Tm/5)^1.514; 
   istar[Tm < 0] <- 0;
   I <- sum(istar);
@@ -65,9 +65,9 @@ leakybucket.monthly <- function(syear,eyear,phi,T,P,Mmax = 0.76,Mmin = 0.01,alph
     for (t in 1:12){  # begin cycling over months in a year
       
       ##### Compute potential evapotranspiration for current month after Thornthwaite:
-      if ( T[t,cyear] < 0 ){Ep = 0;}
-      if ( T[t,cyear] >= 0 && T[t,cyear] < 26.5 ){Ep <- 16*L[t]*(10*T[t,cyear]/I)^a;}
-      if ( T[t,cyear] >= 26.5 ){Ep <- -415.85 + 32.25*T[t,cyear] - .43* T[t,cyear]^2;}
+      if ( Te[t,cyear] < 0 ){Ep = 0;}
+      if ( Te[t,cyear] >= 0 && Te[t,cyear] < 26.5 ){Ep <- 16*L[t]*(10*Te[t,cyear]/I)^a;}
+      if ( Te[t,cyear] >= 26.5 ){Ep <- -415.85 + 32.25*Te[t,cyear] - .43* Te[t,cyear]^2;}
       potEv[t,cyear] <- Ep;
       
       ##### Now calculate soil moisture according to the CPC Leaky Bucket model
@@ -79,9 +79,9 @@ leakybucket.monthly <- function(syear,eyear,phi,T,P,Mmax = 0.76,Mmin = 0.01,alph
         # groundwater loss via percolation:
         G <- mu.th*alph/(1+mu.th)*M[t-1,cyear]*rootd;
         # runoff; contributions from surface flow (1st term) and subsurface (2nd term)
-        R <- P[t,cyear]*(M[t-1,cyear]*rootd/(Mmax*rootd))^m.th +
+        R <- Pr[t,cyear]*(M[t-1,cyear]*rootd/(Mmax*rootd))^m.th +
         (alph/(1+mu.th))*M[t-1,cyear]*rootd;
-        dWdt <- P[t,cyear] - Etrans - R - G;
+        dWdt <- Pr[t,cyear] - Etrans - R - G;
         M[t,cyear] <- M[t-1,cyear] + dWdt/rootd;
       }
       
@@ -91,9 +91,9 @@ leakybucket.monthly <- function(syear,eyear,phi,T,P,Mmax = 0.76,Mmin = 0.01,alph
         # groundwater loss via percolation:
         G <- mu.th*alph/(1+mu.th)*M[12,cyear-1]*rootd;
         # runoff; contributions from surface flow (1st term) and subsurface (2nd term)
-        R <- P[t,cyear]*(M[12,cyear-1]*rootd/(Mmax*rootd))^m.th +
+        R <- Pr[t,cyear]*(M[12,cyear-1]*rootd/(Mmax*rootd))^m.th +
           (alph/(1+mu.th))*M[12,cyear-1]*rootd;
-        dWdt <- P[t,cyear] - Etrans - R - G;
+        dWdt <- Pr[t,cyear] - Etrans - R - G;
         M[t,cyear] <- M[12,cyear-1] + dWdt/rootd;
       }
       
@@ -104,8 +104,8 @@ leakybucket.monthly <- function(syear,eyear,phi,T,P,Mmax = 0.76,Mmin = 0.01,alph
         # groundwater loss via percolation:
         G <- mu.th*alph/(1+mu.th)*(M0*rootd);
         # runoff; contributions from surface flow (1st term) and subsurface (2nd term)
-        R <- P[t,cyear]*(M0*rootd/(Mmax*rootd))^m.th + (alph/(1+mu.th))*M0*rootd;
-        dWdt <- P[t,cyear] - Etrans - R - G;
+        R <- Pr[t,cyear]*(M0*rootd/(Mmax*rootd))^m.th + (alph/(1+mu.th))*M0*rootd;
+        dWdt <- Pr[t,cyear] - Etrans - R - G;
         M[t,cyear] <- M0 + dWdt/rootd;
       }
       

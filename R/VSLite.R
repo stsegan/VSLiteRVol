@@ -8,8 +8,8 @@
 #' @param syear Start year of simulation.
 #' @param eyear End year of simulation.
 #' @param phi Latitude of site (in degrees N).
-#' @param T (12 x Nyrs) Matrix of ordered mean monthly temperatures (in degEes C).
-#' @param P (12 x Nyrs) Matrix of ordered accumulated monthly precipitation (in mm).
+#' @param Te (12 x Nyrs) Matrix of ordered mean monthly temperatures (in degEes C).
+#' @param Pr (12 x Nyrs) Matrix of ordered accumulated monthly precipitation (in mm).
 #' @param T1 Lower temperature threshold for growth to begin (scalar, deg. C).
 #' @param T2 Upper temperature threshold for growth sensitivity to temp (scalar, deg. C).
 #' @param M1 Lower moisture threshold for growth to begin (scalar, v.v).
@@ -44,7 +44,7 @@
 ####################################################################################################
 
 
-VSLite <- function(syear,eyear,phi,T,P,
+VSLite <- function(syear,eyear,phi,Te,Pr,
                         T1 = 8, T2 = 23, M1 = .01, M2 = .05,
                         Mmax = 0.76,Mmin = 0.01,alph = 0.093,
                         m.th = 4.886,mu.th = 5.8,rootd = 1000,M0 = .2,
@@ -60,10 +60,10 @@ VSLite <- function(syear,eyear,phi,T,P,
     M = P;
   }else{# Compute soil moisture:
     if(substep == 1){
-      M <- leakybucket.submonthly(syear,eyear,phi,T,P,
+      M <- leakybucket.submonthly(syear,eyear,phi,Te,Pr,
                                   Mmax,Mmin,alph,m.th,mu.th,rootd,M0);
     }else{
-      M <- leakybucket.monthly(syear,eyear,phi,T,P,
+      M <- leakybucket.monthly(syear,eyear,phi,Te,Pr,
                                Mmax,Mmin,alph,m.th,mu.th,rootd,M0);
     }
     if(substep !=1 && substep != 0){
@@ -79,7 +79,7 @@ VSLite <- function(syear,eyear,phi,T,P,
   ### Calculate Growth Response functions gT and gM
   
   # Temperature growth response:
-  gT <- std.ramp(T,T1,T2)
+  gT <- std.ramp(Te,T1,T2)
   
   # Soil moisture growth response:
   gM <- std.ramp(M,M1,M2)

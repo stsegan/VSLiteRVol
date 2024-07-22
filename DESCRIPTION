@@ -1,4 +1,4 @@
-Package: VSLiteR
+Package: VSLiteRVol
 Type: Package
 Title: R implementation of VS-Lite and VS-Lite parameter estimation
 Version: 1.0

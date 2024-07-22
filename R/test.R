@@ -13,8 +13,8 @@ test_VSLiteR <- function(site = 1){
 ### data(sitecoords,Tmp,P,syear,eyear,trw.obs)
   
   # select climate and location data for the chosen test site:
-  T <- Tmp[,,site];
-  P <- P[,,site];
+  Te <- Tmp[,,site];
+  Pr <- P[,,site];
   phi <- sitecoords[site,1];
   
   #  # estimate the climate response parameters:
