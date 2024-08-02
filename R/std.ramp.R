@@ -10,7 +10,8 @@
 #' 
 #' @export
 
-std.ramp <- function(x,x1,x2){return(
+# Linear
+std.ramp.lin <- function(x,x1,x2){return(
   apply(
     as.matrix(
       apply(
@@ -21,4 +22,42 @@ std.ramp <- function(x,x1,x2){return(
   )
 )}
 
+# Quadratic 
+std.ramp.quad <- function(x, x1, x2, k, m) {
+  linear_part <- (x - x1) / (x2 - x1)
+  quadratic_part <- m*(linear_part^k)
+  return(
+    apply(
+      as.matrix(
+        apply(
+          quadratic_part, 1:length(dim(x)), min, 1
+        )
+      ),
+      1:length(dim(x)), max, 0
+    )
+  )
+}
 
+# Sigmoid
+std.ramp.sig <- function(x, x1, x2, k, m) {
+  linear_part <- (x - x1) / (x2 - x1)
+  sigmoid_part <- m / (1 + exp(-k(x - x1) / (x2 - x1)))
+  return(
+    apply(
+      as.matrix(
+        apply(
+          sigmoid_part, 1:length(dim(x)), min, 1
+        )
+      ),
+      1:length(dim(x)), max, 0
+    )
+  )
+}
+
+# Where k = gradient/steepness of slope, m = height of slope.
+# Would have to change gT/gM to include k and m values. 
+# Need to configure this to either build a 'master function' which includes
+# all possible slopes (i.e. you select a 'slope type' when inputting your data),
+# or just define a function for each shaped slope (current state).
+# Could also add other slope types (maybe a step-wise graph), but not sure if 
+# they are more relevant than the ones already included. 

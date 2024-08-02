@@ -44,11 +44,11 @@
 ####################################################################################################
 
 
-VSLite <- function(syear,eyear,phi,Te,Pr,
-                        T1 = 8, T2 = 23, M1 = .01, M2 = .05,
-                        Mmax = 0.76,Mmin = 0.01,alph = 0.093,
-                        m.th = 4.886,mu.th = 5.8,rootd = 1000,M0 = .2,
-                        substep = 0,I_0 = 1,I_f = 12,hydroclim = "P"){
+VSLite <- function(syear, eyear, phi, Te, Pr, k, m, 
+                   T1 = 8, T2 = 23, M1 = .01, M2 = .05,
+                   Mmax = 0.76,Mmin = 0.01,alph = 0.093,
+                   m.th = 4.886,mu.th = 5.8,rootd = 1000,M0 = .2,
+                   substep = 0,I_0 = 1,I_f = 12,hydroclim = "P"){
   #############################################################################
   nyrs <- length(syear:eyear)
   Gr <- gT <- gM <- M <- potEv <- matrix(NA,12,nyrs);
@@ -79,10 +79,10 @@ VSLite <- function(syear,eyear,phi,Te,Pr,
   ### Calculate Growth Response functions gT and gM
   
   # Temperature growth response:
-  gT <- std.ramp(Te,T1,T2)
+  gT <- std.ramp.quad(Te,T1,T2, k, m)
   
   # Soil moisture growth response:
-  gM <- std.ramp(M,M1,M2)
+  gM <- std.ramp.quad(M,M1,M2, k, m)
   
   # Compute overall growth rate:
   Gr <- kronecker(matrix(1,1,nyrs),gE)*pmin(gT,gM)
@@ -108,7 +108,7 @@ VSLite <- function(syear,eyear,phi,Te,Pr,
   if(phi<0){ # if site is in the Southern Hemisphere:
     # (Note: in the Southern Hemisphere, ring widths are dated to the year in which growth began!)
     startmo <- 7+I_0; # (eg. I_0 = -4 in SH corresponds to starting integration in March of cyear)
-    endmo <- I_f-6; # (eg. I_f = 12 in SH corresponds to ending integraion in June of next year)
+    endmo <- I_f-6; # (eg. I_f = 12 in SH corresponds to ending integration in June of next year)
     for (cyear in 1:(nyrs-1)){
       width(cyear) <- sum(Gr[startmo:12,cyear]) + sum(Gr[1:endmo,cyear+1]);
     }
@@ -127,5 +127,7 @@ VSLite <- function(syear,eyear,phi,Te,Pr,
   return(out)
 
 }
+
+
 
 
