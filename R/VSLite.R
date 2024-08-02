@@ -79,10 +79,10 @@ VSLite <- function(syear, eyear, phi, Te, Pr, k, m,
   ### Calculate Growth Response functions gT and gM
   
   # Temperature growth response:
-  gT <- std.ramp.quad(Te,T1,T2, k, m)
+  gT <- std.ramp.quad(Te,T1,T2, k = k, m = m)
   
   # Soil moisture growth response:
-  gM <- std.ramp.quad(M,M1,M2, k, m)
+  gM <- std.ramp.quad(M,M1,M2, k = k, m = m)
   
   # Compute overall growth rate:
   Gr <- kronecker(matrix(1,1,nyrs),gE)*pmin(gT,gM)
