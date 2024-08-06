@@ -29,7 +29,7 @@
 #' @export
 
 ## LEAKY BUCKET WITH SUBSTEPPING ##
-leakybucket.submonthly <- function(syear,eyear,phi,T,P,Mmax = 0.76,Mmin = 0.01,alph = 0.093,
+leakybucket.submonthly <- function(syear,eyear,phi,Te,Pr,Mmax = 0.76,Mmin = 0.01,alph = 0.093,
                                    m.th = 4.886,mu.th = 5.8,rootd = 1000,M0 = .2){
   
   #  [M,potEv,ndl,cdays] <- leakybucket_submonthly(syear,eyear,phi,T,P,...
@@ -79,7 +79,7 @@ leakybucket.submonthly <- function(syear,eyear,phi,T,P,Mmax = 0.76,Mmin = 0.01,a
   L <- daylength.factor.from.lat(phi); 
   
   # Pre-calculation of istar and I, using input T to compute the climatology:
-  Tm <- colMeans(T);
+  Tm <- colMeans(Te);
   istar <- (Tm/5)^1.514;
   istar[Tm < 0] <- 0;
   I <- sum(istar);
@@ -99,9 +99,9 @@ leakybucket.submonthly <- function(syear,eyear,phi,T,P,Mmax = 0.76,Mmin = 0.01,a
     for (t in 1:12){  # begin cycling over months in a year
       
       ##### Compute potential evapotranspiration for current month after Thornthwaite:
-      if (T[t,cyear] < 0){Ep <- 0;}
-      if (T(t,cyear) >= 0 && T(t,cyear) < 26.5){Ep <- 16*L[t]*(10*T[t,cyear]/I)^a;}
-      if (T[t,cyear] >= 26.5){Ep <- -415.85 + 32.25*T[t,cyear] - .43* T[t,cyear]^2;}
+      if (Te[t,cyear] < 0){Ep <- 0;}
+      if (Te(t,cyear) >= 0 && Te(t,cyear) < 26.5){Ep <- 16*L[t]*(10*Te[t,cyear]/I)^a;}
+      if (Te[t,cyear] >= 26.5){Ep <- -415.85 + 32.25*Te[t,cyear] - .43* Te[t,cyear]^2;}
       potEv[t,cyear] <- Ep;
       
       ##### Now calculate soil moisture according to the CPC Leaky Bucket model
