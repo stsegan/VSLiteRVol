@@ -41,7 +41,7 @@ std.ramp.quad <- function(x, x1, x2, k) {
 # Sigmoid
 std.ramp.sig <- function(x, x1, x2, k, m) {
   linear_part <- (x - x1) / (x2 - x1)
-  sigmoid_part <- m / (1 + exp(-k(x - x1) / (x2 - x1)))
+  sigmoid_part <- m * (1 / (1 + exp(-k * (x - x1) / (x2 - x1))))
   return(
     apply(
       as.matrix(
