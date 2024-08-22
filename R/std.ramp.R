@@ -11,11 +11,11 @@
 #' @export
 
 # Linear
-std.ramp.lin <- function(x,x1,x2){return(
+std.ramp.lin <- function(x, x1, x2, k){return(
   apply(
     as.matrix(
       apply(
-        (x-x1)/(x2-x1), 1:length(dim(x)), min, 1
+        k * ((x-x1)/(x2-x1)), 1:length(dim(x)), min, 1
         )
       ),
     1:length(dim(x)), max, 0
