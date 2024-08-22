@@ -29,8 +29,7 @@ std.ramp.quad <- function(x, x1, x2, k, m) {
     return(NaN)  # Return NaN for invalid cases
   }
   quadratic_part <- m * (linear_part^k)
-}
-  return(
+return(
     apply(
       as.matrix(
         apply(
