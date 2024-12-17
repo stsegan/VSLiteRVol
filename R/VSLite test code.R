@@ -199,10 +199,11 @@ vs_garch_long <- pivot_longer(vs_vol, cols = -Year, names_to = "Series", values_
 
 ggplot(vs_garch_long, aes(x = Year, y = Volatility, color = Series, group = Series)) +
   geom_line() +
+  scale_x_discrete(breaks = seq(1910, 2020, by = 10)) +
   theme_minimal() +
-  labs(title = "Linear VSLite Volatility Plot", x = "Time", y = "Volatility")
+  labs(title = "Linear VSLite Volatility Plot", x = "Year", y = "Volatility")
 
-
+?scale_x_continuous
 
 # Need to: 
 # NEW 
