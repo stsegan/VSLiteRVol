@@ -23,9 +23,9 @@ std.ramp.lin <- function(x, x1, x2, k){return(
 )}
 
 # Quadratic 
-std.ramp.quad <- function(x, x1, x2, k, l) {
+std.ramp.quad <- function(x, x1, x2, k, m) {
   linear_part <- (x - x1) / (x2 - x1)
-  quadratic_part <- l * (linear_part^k)
+  quadratic_part <- m * (linear_part^k)
   return(
     apply(
       as.matrix(
@@ -39,9 +39,9 @@ std.ramp.quad <- function(x, x1, x2, k, l) {
 }
 
 # Sigmoid
-std.ramp.sig <- function(x, x1, x2, k, l) {
+std.ramp.sig <- function(x, x1, x2, k, m) {
   linear_part <- (x - x1) / (x2 - x1)
-  sigmoid_part <- l * (1 / (1 + exp(-k * (x - x1) / (x2 - x1))))
+  sigmoid_part <- m * (1 / (1 + exp(-k * (x - x1) / (x2 - x1))))
   return(
     apply(
       as.matrix(
