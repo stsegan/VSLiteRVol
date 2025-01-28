@@ -1,15 +1,15 @@
 # Source Github code
 {
-  source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/VSLite.R")
-  source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/compute.gE.R")
-  source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/dataset_doc.R")
-  source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/daylength.factor.from.lat.R")
-  source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/leakybucket.monthly.R")
-  source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/leakybucket.submonthly.R")
-  source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/std.ramp.R")
-  source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/test.R")
-  source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/param_est.r")
-  source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/sample_thresh_pars.r")
+source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/VSLite.R")
+source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/compute.gE.R")
+source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/dataset_doc.R")
+source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/daylength.factor.from.lat.R")
+source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/leakybucket.monthly.R")
+source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/leakybucket.submonthly.R")
+source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/std.ramp.R")
+source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/test.R")
+source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/param_est.r")
+source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/sample_thresh_pars.r")
 }
 
 # 0. Pick site
@@ -28,20 +28,20 @@ eyear <- 2016
 # Format climate data
 # temp
 {
-  tmp <- clim %>% 
-    select(month, tmp) %>% 
-    group_by(month) %>% 
-    arrange(.by_group = TRUE) %>% 
-    mutate(id = row_number()) %>% 
-    pivot_wider(names_from = month, values_from = tmp)
-  
-  
-  tmp <- tmp %>% 
-    mutate(year = c(syear:eyear)) %>% 
-    relocate(year) %>% 
-    select(-c(id, year))
-  tmp <- as.matrix(tmp)
-  tmp <- t(tmp)
+tmp <- clim %>% 
+  select(month, tmp) %>% 
+  group_by(month) %>% 
+  arrange(.by_group = TRUE) %>% 
+  mutate(id = row_number()) %>% 
+  pivot_wider(names_from = month, values_from = tmp)
+
+
+tmp <- tmp %>% 
+  mutate(year = c(syear:eyear)) %>% 
+  relocate(year) %>% 
+  select(-c(id, year))
+tmp <- as.matrix(tmp)
+tmp <- t(tmp)
 }
 
 # prec
@@ -66,13 +66,17 @@ vs_list <- list()
 trw_list <- list()
 k <- seq(0.1, 10, by = 0.1)
 
-for(i in 1:length(k)){
+for(i in 1:length(m)){
   
-  vs_list[[i]] <- VSLite(syear = 1901, eyear = 2016, phi = lat, Te = tmp, 
-                         Pr = pre, k = k[i])
+vs_list[[i]] <- VSLite(syear = 1901, eyear = 2016, phi = lat, Te = tmp, 
+                      Pr = pre, k = 2, m = m[i])
 
+trw_list[[i]] <- t(as.data.frame(vs_list[[i]]$trw))
+}
 
-RespCur <- as.data.frame(vs_list[[i]]$gT) %>% 
+RespCur <- as.data.frame(vs_list[[i]]$gT)
+
+RespCur <- RespCur %>% 
   mutate(Year = rownames(RespCur))
 
 RC_longer <-  pivot_longer(RespCur, cols = -Year, names_to = "Series", values_to = "RC")
