@@ -64,19 +64,19 @@ tmp <- t(tmp)
 # VSLite runs
 vs_list <- list()
 trw_list <- list()
-k <- seq(0.1, 10, by = 0.1)
+k <- seq(0.01, 10, by = 0.01)
 
-for(i in 1:length(m)){
+for(i in 1:length(k)){
   
-vs_list[[i]] <- VSLite(syear = 1901, eyear = 2016, phi = lat, Te = tmp, 
-                      Pr = pre, k = 2, m = m[i])
-
-trw_list[[i]] <- t(as.data.frame(vs_list[[i]]$trw))
+  vs_list[[i]] <- VSLite(syear = 1901, eyear = 2016, phi = lat, Te = tmp, 
+                         Pr = pre, k = k[i], m = 1)
+  
+  trw_list[[i]] <- t(as.data.frame(vs_list[[i]]$trw))
 }
 
-RespCur <- as.data.frame(vs_list[[i]]$gT)
+RespCur <- as.data.frame(vs_list[[i]]$gT) 
 
-RespCur <- RespCur %>% 
+RespCur <- RespCur%>% 
   mutate(Year = rownames(RespCur))
 
 RC_longer <-  pivot_longer(RespCur, cols = -Year, names_to = "Series", values_to = "RC")

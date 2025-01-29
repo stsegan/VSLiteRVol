@@ -29,11 +29,11 @@ library(aTSA)
 library(dplyr)
 library(ggplot2)
 library(RColorBrewer)
+library(progress)
 }
 
 #### 0. Pick site ####
 rw <- read.rwl("C:/Users/User/Local Documents/R_Data/.rwl/UK/NET.rwl") 
-
 
 
 #### 1. Filter for site climate data ####
@@ -140,12 +140,14 @@ clim_reg %>%
 
 
 
+
+
 #### 3. VSLite runs ####
 
 # Formatting 
 vs_list <- list()
 trw_list <- list()
-k <- seq(0.1, 10, by = 0.1)
+k <- seq(0.02, 10, by = 0.02)
 
 # Run
 for(i in 1:length(k)){
@@ -159,51 +161,48 @@ for(i in 1:length(k)){
 # Formatting Output
 trw_df <- as.data.frame(trw_list)
 colnames(trw_df) <- k
-rownames(trw_df) <- c(syear:eyear)
+trw_transformed <- apply(trw_df, 2, function(x) x + abs(min(x)) + 0.001)
+trw_df <- as.data.frame(trw_transformed)
+
+
+trw_df <- trw_df %>% 
+  mutate(Year = c(syear:eyear))
 
 #### 4. Response curve graph #### 
 
 RespCur <- as.data.frame(vs_list[[i]]$gT) 
 
 RespCur <- RespCur%>% 
-  mutate(Year = rownames(RespCur))
+  mutate(Month = rownames(RespCur))
 
-RC_longer <-  pivot_longer(RespCur, cols = -Year, names_to = "Series", values_to = "RC")
+RC_longer <-  pivot_longer(RespCur, cols = -Month, names_to = "Series", values_to = "RC")
 
-ggplot(RC_longer, aes(x = Year, y = RC, color = Series, group = Series)) +
+ggplot(RC_longer, aes(x = Month, y = RC, color = Series, group = Series)) +
   geom_line(stat = "smooth",method = "loess", alpha = 0.4, aes(group = Series), se = F, show.legend = F) +
   theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25) +
-  scale_x_discrete(
-    breaks = seq(1900, 2040, by = 20)
-  ) +
-  labs(title = "Sigmoidal Ensemble Response Curve", x = "Time", y = "Response Curve")
+  labs(title = "Sigmoidal Ensemble Response Curve", x = "Month", y = "Temperature-based growth response (gT)")
 
-#### 5. Create .rwl of artificial ring-widths ####
 
-write.tucson(rwl.df = trw_df, fname = "Nettlebed Sigmoid.rwl")
-trw_rwl <- read.rwl("C:/Users/User/Local Documents/R_Data/.rwl/UK/Nettlebed Sigmoid.rwl")
+#### 5. Artificial Ring-Width plot ####
 
-#### 6. Artificial Ring-Width plot ####
-
-rw_df <- as.data.frame(trw_rwl) 
-
-rw_df <- rw_df %>% 
-  mutate(Year = rownames(rw_df))
-
-rw_longer <- pivot_longer(rw_df, cols = -Year, names_to = "Series", values_to = "RW")
+rw_longer <- pivot_longer(trw_df, cols = -Year, names_to = "Series", values_to = "RW")
 
 ggplot(rw_longer, aes(x = Year, y = RW, color = Series, group = Series)) +
-  geom_line(alpha = 0.20, show.legend = F) +
+  geom_line(alpha = 0.1, show.legend = F) +
   theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25) +
-  scale_x_discrete(
-    breaks = seq(1900, 2040, by = 20)
-  ) +
-  labs(title = "Sigmoidal Ensemble Ring Width Plot, Nettlebed UK", x = "Time", y = "Ring Width (mm)")
+  scale_x_continuous(breaks = seq(1900, 2020, by = 20)) +
+  labs(title = "Sigmoidal Ensemble Ring Width Plot, Nettlebed UK", x = "Year", y = "Ring Width Index")
 
-#### 7. GARCH Run #### 
+
+#### 6. GARCH Run #### 
+
+# Data formatting 
+rownames(trw_df) <- trw_df$Year
+trw_df <- trw_df %>% 
+  select(-Year)
 
 # GARCH function
-do_garch <- function(x, detrending = "gam", ...) {
+do_garch <- function(x) {
   
   get_aic <- function(x) {
     if (any(class(x) == "error")) {
@@ -214,13 +213,8 @@ do_garch <- function(x, detrending = "gam", ...) {
   
   .names <- colnames(x)
   
-  # step 1: detrending
-  if (detrending == "gam") {
-    xd <- detrend_gam(x)
-  } else {
-    xd <- detrend(x, method = "Spline", ...)
-  }
-  
+ xd <- x
+
   out <- list()
   out$rwi <- xd
   
@@ -231,6 +225,7 @@ do_garch <- function(x, detrending = "gam", ...) {
   garch_models <- list()
   arima_output <- list()
   volatility_output <- list()
+  
   for (i in 1:n_series) {
     series <- xd[ ,i]
     .name <- .names[i]
@@ -306,20 +301,18 @@ do_garch <- function(x, detrending = "gam", ...) {
 }
 
 # Run
-vs_garch <- do_garch(x = trw_rwl, detrending = "Spline", nyrs = 32)
+vs_garch <- do_garch(x = trw_df)
 vs_vol <- vs_garch$volatility
 vs_vol <- vs_vol[, !sapply(vs_vol, anyNA)]
 vs_vol$Year <- rownames(vs_vol)
 
-#### 8. Volatility Plot ####
+#### 7. Volatility Plot ####
 
 vs_garch_long <- pivot_longer(vs_vol, cols = -Year, names_to = "Series", values_to = "Volatility")
 
 ggplot(vs_garch_long, aes(x = Year, y = Volatility, color = Series, group = Series)) +
-  geom_line(alpha = 0.20, show.legend = F) +
+  geom_line(alpha = 0.2, show.legend = F) +
   theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25) +
-  scale_x_discrete(
-    breaks = seq(1900, 2040, by = 20)
-  ) +
+  scale_x_discrete(breaks = seq(1900, 2020, by = 20)) +
   labs(title = "Sigmoidal VSLite Volatility Plot, Nettlebed UK", x = "Time", y = "Volatility")
 
