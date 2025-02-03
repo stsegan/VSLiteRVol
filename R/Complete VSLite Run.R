@@ -42,8 +42,8 @@ clim <- read_csv("C:/Users/User/Local Documents/R_Data/.csv & .xlsx/Climate/fagu
 clim <- clim %>% filter(site_id == "NET") %>% 
   select(month, year, tmp, pre)
 lat <- 51.57 # found in fagus_meta
-syear <- 1901
-eyear <- 2016
+syear <- head(clim$year, n = 1)
+eyear <- tail(clim$year, n = 1)
 
 
 
@@ -86,56 +86,60 @@ eyear <- 2016
 
 
 #### 2.5 Alterations to climate data #### 
-clim_reg <- read_csv2("C:/Users/User/Local Documents//R_Data/.csv & .xlsx/Climate/REG_Climate.csv")
-clim_reg[,1]
-clim_reg <- clim_reg %>% 
-  mutate(num = c(1:1440))
+clim <- read_csv("C:/Users/User/Local Documents/R_Data/.csv & .xlsx/Climate/fagus_climate.csv")
+
+
+clim <- clim %>% filter(site_id == "NET") %>% 
+  select(month, year, tmp, pre)
+clim <- clim %>% 
+  mutate(num = c(1:length(year)))
 
 # Option 1
-clim_reg <- clim_reg %>% 
+clim <- clim %>% 
   mutate(trend = 0.5 + (0.001 * (num * sin(num) ^ 2)))
 
 # Option 2
-#out <- lm(tmax ~ num * sin(num), data = clim_reg)
+#out <- lm(tmp ~ num * sin(num), data = clim)
 #out_fv <- fitted.values(out)
 #out_fv <- 0.1 * out_fv # 1 + (out_fv - mean(out_fv))
-#clim_reg <- clim_reg %>% 
+#clim <- clim %>% 
 #  mutate(trend = out_fv)
 
-plot(x = clim_reg$year, y = clim_reg$trend, 
+plot(x = clim$year, y = clim$trend, 
      type = "p")
 
-clim_reg <- clim_reg %>%
-  mutate(trend_tmax = tmax * trend)
-clim_reg <- clim_reg %>% 
-  mutate(trend_prec = prec * trend)
+clim <- clim %>%
+  mutate(trend_tmp = tmp * trend)
+clim <- clim %>% 
+  mutate(trend_pre = pre * trend)
 
 
-clim_reg %>% 
-  ggplot(aes(x = num, y = trend_tmax)) +
+clim %>% 
+  ggplot(aes(x = num, y = trend_tmp)) +
   geom_point(col = "darkblue", alpha = 0.4) + 
-  geom_point(aes(x = num, y = tmax), colour = "lightblue3", alpha = 0.4) +
-  geom_smooth(method = "loess", aes(y = trend_tmax), se = F, colour = "darkblue", lwd = 1.5, span = 2) +
-  geom_smooth(method = "loess", aes(y = tmax), se = F, colour = "lightblue", lwd = 1.5, span = 2) +
+  geom_point(aes(x = num, y = tmp), colour = "lightblue3", alpha = 0.4) +
+  geom_smooth(method = "loess", aes(y = trend_tmp), se = F, colour = "darkblue", lwd = 1.5, span = 2) +
+  geom_smooth(method = "loess", aes(y = tmp), se = F, colour = "lightblue", lwd = 1.5, span = 2) +
   labs(
-    title = "Observed vs. Artificial Monthly Max. Temperature",
+    title = "Observed vs. Artificial Monthly Average Temperature",
     x = "Month",
     y = "Maximum Temperature"
   ) +
-  theme_cowplot()
+  theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25)
 
-clim_reg %>% 
-  ggplot(aes(x = num, y = trend_prec)) +
+clim %>% 
+  ggplot(aes(x = num, y = trend_pre)) +
   geom_point(col = "darkblue", alpha = 0.4) + 
-  geom_point(aes(x = num, y = prec), colour = "lightblue3", alpha = 0.4) +
-  geom_smooth(method = "loess", aes(y = trend_prec), se = F, colour = "darkblue", lwd = 1.5, span = 2) +
-  geom_smooth(method = "loess", aes(y = prec), se = F, colour = "lightblue", lwd = 1.5, span = 2) +
+  geom_point(aes(x = num, y = pre), colour = "lightblue3", alpha = 0.4) +
+  geom_smooth(method = "loess", aes(y = trend_pre), se = F, colour = "darkblue", lwd = 1.5, span = 2) +
+  geom_smooth(method = "loess", aes(y = pre), se = F, colour = "lightblue", lwd = 1.5, span = 2) +
   labs(
     title = "Observed vs. Artificial Monthly Precipitation",
     x = "Month",
     y = "Monthly Precipitation (mm)"
   ) +
-  theme_cowplot()
+  theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25)
+
 
 
 
@@ -149,7 +153,8 @@ vs_list <- list()
 trw_list <- list()
 k <- seq(0.02, 10, by = 0.02)
 
-# Run
+# Run - for non-climate run, need to change ramp function in VSLite.R. 
+# For climate run, change Te and Pr to trend_tmp and trend_pre, with Linear ramp.
 for(i in 1:length(k)){
   
   vs_list[[i]] <- VSLite(syear = 1901, eyear = 2016, phi = lat, Te = tmp, 
@@ -180,7 +185,8 @@ RC_longer <-  pivot_longer(RespCur, cols = -Month, names_to = "Series", values_t
 ggplot(RC_longer, aes(x = Month, y = RC, color = Series, group = Series)) +
   geom_line(stat = "smooth",method = "loess", alpha = 0.4, aes(group = Series), se = F, show.legend = F) +
   theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25) +
-  labs(title = "Sigmoidal Ensemble Response Curve", x = "Month", y = "Temperature-based growth response (gT)")
+  scale_x_discrete(breaks = seq(1, 12, 1)) +
+  labs(title = "Sigmoidal Ensemble Response Curve, Nettlebed UK", x = "Month", y = "Temperature-based growth response (gT)")
 
 
 #### 5. Artificial Ring-Width plot ####
