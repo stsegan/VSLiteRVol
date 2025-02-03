@@ -161,10 +161,10 @@ m <- seq(0.02, 10, by = 0.02)
 
 # Run - for non-climate run, need to change ramp function in VSLite.R. 
 # For climate run, change Te and Pr to trend_tmp and trend_pre, with Linear ramp.
-for(i in 1:length(k)){
+for(i in 1:length(m)){
   
   vs_list[[i]] <- VSLite(syear = 1901, eyear = 2016, phi = lat, Te = tmp, 
-                         Pr = pre, m = m[i], k = 1)
+                         Pr = pre, m = m[i], k = 2)
   
   trw_list[[i]] <- t(as.data.frame(vs_list[[i]]$trw))
 }
