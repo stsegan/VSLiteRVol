@@ -15,6 +15,7 @@
 # Necessary Packages
 {
 library(cowplot)
+library(grid)
 library(wesanderson)
 library(fagus)
 library(gridExtra)
@@ -114,35 +115,40 @@ clim <- clim %>%
   mutate(trend_pre = pre * trend)
 
 
-clim %>% 
+plot_tmp <- clim %>% 
   ggplot(aes(x = num, y = trend_tmp)) +
   geom_point(col = "darkblue", alpha = 0.4) + 
   geom_point(aes(x = num, y = tmp), colour = "lightblue3", alpha = 0.4) +
   geom_smooth(method = "loess", aes(y = trend_tmp), se = F, colour = "darkblue", lwd = 1.5, span = 2) +
   geom_smooth(method = "loess", aes(y = tmp), se = F, colour = "lightblue", lwd = 1.5, span = 2) +
   labs(
-    title = "Observed vs. Artificial Monthly Average Temperature",
+    title = "",
     x = "Month",
     y = "Maximum Temperature"
   ) +
   theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25)
 
-clim %>% 
+plot_pre <- clim %>% 
   ggplot(aes(x = num, y = trend_pre)) +
   geom_point(col = "darkblue", alpha = 0.4) + 
   geom_point(aes(x = num, y = pre), colour = "lightblue3", alpha = 0.4) +
   geom_smooth(method = "loess", aes(y = trend_pre), se = F, colour = "darkblue", lwd = 1.5, span = 2) +
   geom_smooth(method = "loess", aes(y = pre), se = F, colour = "lightblue", lwd = 1.5, span = 2) +
   labs(
-    title = "Observed vs. Artificial Monthly Precipitation",
+    title = "",
     x = "Month",
     y = "Monthly Precipitation (mm)"
   ) +
   theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25)
 
 
+obs_art_clim <- grid.arrange(plot_tmp, plot_pre, nrow = 1, 
+             top = textGrob("Observed vs. Artificial Monthly Average Climate"
+                            ,gp=gpar(fontsize = 16,font = 1)))
 
-
+ggsave(filename = "Observed vs. Artificial Monthly Average Climate.png", obs_art_clim, 
+       dpi = 500, device = "png", width = 10, height = 6,
+       path = "C:/Users/User/Local Documents/R_Data/Graphs/GARCH Paper")
 
 
 
@@ -151,14 +157,14 @@ clim %>%
 # Formatting 
 vs_list <- list()
 trw_list <- list()
-k <- seq(0.02, 10, by = 0.02)
+m <- seq(0.02, 10, by = 0.02)
 
 # Run - for non-climate run, need to change ramp function in VSLite.R. 
 # For climate run, change Te and Pr to trend_tmp and trend_pre, with Linear ramp.
 for(i in 1:length(k)){
   
   vs_list[[i]] <- VSLite(syear = 1901, eyear = 2016, phi = lat, Te = tmp, 
-                         Pr = pre, k = k[i], m = 1)
+                         Pr = pre, m = m[i], k = 1)
   
   trw_list[[i]] <- t(as.data.frame(vs_list[[i]]$trw))
 }
@@ -182,22 +188,22 @@ RespCur <- RespCur%>%
 
 RC_longer <-  pivot_longer(RespCur, cols = -Month, names_to = "Series", values_to = "RC")
 
-ggplot(RC_longer, aes(x = Month, y = RC, color = Series, group = Series)) +
+vs_rc <- ggplot(RC_longer, aes(x = Month, y = RC, color = Series, group = Series)) +
   geom_line(stat = "smooth",method = "loess", alpha = 0.4, aes(group = Series), se = F, show.legend = F) +
   theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25) +
   scale_x_discrete(breaks = seq(1, 12, 1)) +
-  labs(title = "Sigmoidal Ensemble Response Curve, Nettlebed UK", x = "Month", y = "Temperature-based growth response (gT)")
+  labs(title = "", x = "Month", y = "gT")
 
 
 #### 5. Artificial Ring-Width plot ####
 
 rw_longer <- pivot_longer(trw_df, cols = -Year, names_to = "Series", values_to = "RW")
 
-ggplot(rw_longer, aes(x = Year, y = RW, color = Series, group = Series)) +
+vs_rwi <- ggplot(rw_longer, aes(x = Year, y = RW, color = Series, group = Series)) +
   geom_line(alpha = 0.1, show.legend = F) +
   theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25) +
   scale_x_continuous(breaks = seq(1900, 2020, by = 20)) +
-  labs(title = "Sigmoidal Ensemble Ring Width Plot, Nettlebed UK", x = "Year", y = "Ring Width Index")
+  labs(title = "", x = "Year", y = "Ring Width Index (RWI)")
 
 
 #### 6. GARCH Run #### 
@@ -316,9 +322,20 @@ vs_vol$Year <- rownames(vs_vol)
 
 vs_garch_long <- pivot_longer(vs_vol, cols = -Year, names_to = "Series", values_to = "Volatility")
 
-ggplot(vs_garch_long, aes(x = Year, y = Volatility, color = Series, group = Series)) +
+vs_vol <- ggplot(vs_garch_long, aes(x = Year, y = Volatility, color = Series, group = Series)) +
   geom_line(alpha = 0.2, show.legend = F) +
   theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25) +
-  scale_x_discrete(breaks = seq(1900, 2020, by = 20)) +
-  labs(title = "Sigmoidal VSLite Volatility Plot, Nettlebed UK", x = "Time", y = "Volatility")
+  scale_x_discrete(breaks = seq(1900, 2040, by = 20)) +
+  labs(title = "", x = "Time", y = "Volatility")
 
+
+lay <- rbind(c(1, 2),c(1, 2),
+             c(3, 3))
+
+vs_plots <- grid.arrange(vs_rwi, vs_vol, vs_rc, nrow = 2, layout_matrix = lay, 
+                            top = textGrob("Quadratic VSLite Plots (Nettlebed, UK)"
+                                           ,gp=gpar(fontsize = 20,font = 1)))
+
+ggsave(filename = "Quadratic VSLite Volatility Plots, Nettlebed UK.png", vs_plots, 
+       dpi = 500, device = "png", width = 10, height = 6,
+       path = "C:/Users/User/Local Documents/R_Data/Graphs/GARCH Paper")
