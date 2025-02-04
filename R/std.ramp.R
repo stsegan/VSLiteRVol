@@ -37,7 +37,7 @@ std.ramp.lin <- function(x, x1, x2, k){return(
 # Quadratic 
 std.ramp.quad <- function(x, x1, x2, k, m) {
   linear_part <- (x - x1) / (x2 - x1)
-  quadratic_part <- m * ((linear_part)^k)
+  quadratic_part <- m*((linear_part)^k)
   return(
     apply(
       as.matrix(
