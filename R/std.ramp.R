@@ -10,6 +10,18 @@
 #' 
 #' @export
 
+# Base VSLite Ramp
+std.ramp <- function(x,x1,x2){return(
+  apply(
+    as.matrix(
+      apply(
+        (x-x1)/(x2-x1), 1:length(dim(x)), min, 1
+      )
+    ),
+    1:length(dim(x)), max, 0
+  )
+)}
+
 # Linear
 std.ramp.lin <- function(x, x1, x2, k){return(
   apply(
