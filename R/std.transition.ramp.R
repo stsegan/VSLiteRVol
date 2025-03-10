@@ -11,11 +11,11 @@
 #' @export
 
 # Linear
-std.ramp.lin <- function(x, x1, x2, k_lin){return(
+std.ramp.lin <- function(x, x1, x2, k){return(
   apply(
     as.matrix(
       apply(
-        k_lin * ((x-x1)/(x2-x1)), 1:length(dim(x)), min, 1
+        k * ((x-x1)/(x2-x1)), 1:length(dim(x)), min, 1
       )
     ),
     1:length(dim(x)), max, 0
@@ -24,9 +24,9 @@ std.ramp.lin <- function(x, x1, x2, k_lin){return(
 
 
 # Sigmoid
-std.ramp.sig <- function(x, x1, x2, k_sig, m_sig) {
+std.ramp.sig <- function(x, x1, x2, k, m) {
   linear_part <- (x - x1) / (x2 - x1)
-  sigmoid_part <- m_sig * (1 / (1 + exp(-k_sig * (x - x1) / (x2 - x1))))
+  sigmoid_part <- m * (1 / (1 + exp(-k * (x - x1) / (x2 - x1))))
   return(
     apply(
       as.matrix(
