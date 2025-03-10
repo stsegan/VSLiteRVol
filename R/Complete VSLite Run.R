@@ -199,15 +199,17 @@ obs_art_clim <- grid.arrange(plot_tmp, plot_pre, plot_trend, nrow = 2, layout_ma
 # Formatting 
 vs_list <- list()
 trw_list <- list()
-m <- seq(0.02, 10, by = 0.02)
+k_lin <- seq(0.02, 10, by = 0.02)
+k_sig <- seq(0.02, 10, by = 0.02)
+
 
 
 # Run - for non-climate run, need to change ramp function in VSLite.R. 
 # For climate run, change Te and Pr to trend_tmp and trend_pre, with Linear ramp.
-for(i in 1:length(m)){
+for(i in 1:length(k_sig)){
   
   vs_list[[i]] <- VSLite(syear = 1901, eyear = 2016, phi = lat, Te = tmp, 
-                         Pr = pre, m = m[i], k = 2)
+                         Pr = pre, k_sig = k_sig[i], k_lin = k_lin[i])
   
   trw_list[[i]] <- t(as.data.frame(vs_list[[i]]$trw))
 }
