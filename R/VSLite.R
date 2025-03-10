@@ -44,7 +44,7 @@
 ####################################################################################################
 
 
-VSLite <- function(syear, eyear, phi, Te, Pr, x_transition, k_lin, k_sig, m_sig, 
+VSLite <- function(syear, eyear, phi, Te, Pr, x_transition, k_lin, k_sig, m_sig = 1, 
                    T1 = 8, T2 = 23, M1 = .01, M2 = .05,
                    Mmax = 0.76,Mmin = 0.01,alph = 0.093,
                    m.th = 4.886,mu.th = 5.8,rootd = 1000,M0 = .2,

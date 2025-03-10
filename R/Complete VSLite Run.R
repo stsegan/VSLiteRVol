@@ -33,14 +33,9 @@ library(RColorBrewer)
 library(progress)
 }
 
-#### 0. Pick site ####
-rw <- read.rwl("C:/Users/User/Local Documents/R_Data/.rwl/UK/NET.rwl") 
-
-palette <- brewer.pal(7, "Greens")
-
 #### 1. Filter for site climate data ####
 clim <- read_csv("C:/Users/User/Local Documents/R_Data/.csv & .xlsx/Climate/fagus_climate.csv")
-
+# view(fagus_meta)
 clim <- clim %>% filter(site_id == "NET") %>% 
   select(month, year, tmp, pre)
 lat <- 51.57 # found in fagus_meta
@@ -191,9 +186,12 @@ obs_art_clim <- grid.arrange(plot_tmp, plot_pre, plot_trend, nrow = 2, layout_ma
              top = textGrob("Observed vs. Artificial Monthly Average Climate"
                             ,gp=gpar(fontsize = 16,font = 1)))
 
-ggsave(filename = "Observed vs. Artificial Monthly Average Climate.png", obs_art_clim, 
-       dpi = 500, device = "png", width = 10, height = 6,
-       path = "C:/Users/User/Local Documents/R_Data/Graphs/GARCH Paper")
+# ggsave(filename = "Observed vs. Artificial Monthly Average Climate.png", obs_art_clim, 
+#       dpi = 500, device = "png", width = 10, height = 6,
+#       path = "C:/Users/User/Local Documents/R_Data/Graphs/GARCH Paper")
+
+
+
 
 
 #### 3. VSLite runs ####
@@ -201,22 +199,22 @@ ggsave(filename = "Observed vs. Artificial Monthly Average Climate.png", obs_art
 # Formatting 
 vs_list <- list()
 trw_list <- list()
-k <- seq(0.02, 10, by = 0.02)
+m <- seq(0.02, 10, by = 0.02)
 
 
 # Run - for non-climate run, need to change ramp function in VSLite.R. 
 # For climate run, change Te and Pr to trend_tmp and trend_pre, with Linear ramp.
-for(i in 1:length(k)){
+for(i in 1:length(m)){
   
-  vs_list[[i]] <- VSLite(syear = 1901, eyear = 2016, phi = lat, Te = trend_tmp, 
-                         Pr = trend_pre, k = k[i])
+  vs_list[[i]] <- VSLite(syear = 1901, eyear = 2016, phi = lat, Te = tmp, 
+                         Pr = pre, m = m[i], k = 2)
   
   trw_list[[i]] <- t(as.data.frame(vs_list[[i]]$trw))
 }
 
 # Formatting Output
 trw_df <- as.data.frame(trw_list)
-colnames(trw_df) <- k
+colnames(trw_df) <- m
 trw_transformed <- apply(trw_df, 2, function(x) x + abs(min(x)) + 0.001)
 trw_df <- as.data.frame(trw_transformed)
 
@@ -260,7 +258,31 @@ trw_df <- trw_df %>%
   select(-Year)
 
 # GARCH function
-do_garch <- function(x) {
+detrend_gam <- function(rwl) {
+  year <- as.numeric(rownames(rwl))
+  tree_names <- colnames(rwl)
+  out <- list()
+  for (i in tree_names) {
+    x <- rwl[, i]
+    .data <- na.omit(data.frame(year = year, x = x))
+    gam_model <- tryCatch(
+      gam(x ~ s(year), data = .data),
+      error = function(e) e)
+    if (any(class(gam_model) == "error")) stop()
+    .data$res <- .data$x
+    .data$tree <- i
+    out[[i]] <- .data
+  }
+  d <- bind_rows(out) %>% select(-x) %>% 
+    arrange(year) %>% 
+    pivot_wider(names_from = "tree",
+                values_from = "res", values_fill = NA) %>% 
+    data.frame()
+  rownames(d) <- d$year
+  d$year <- NULL
+  d  
+}
+do_garch <- function(x, detrending = "gam", ...) {
   
   get_aic <- function(x) {
     if (any(class(x) == "error")) {
@@ -271,8 +293,13 @@ do_garch <- function(x) {
   
   .names <- colnames(x)
   
- xd <- x
-
+  # step 1: detrending
+  if (detrending == "gam") {
+    xd <- detrend_gam(x)
+  } else {
+    xd <- detrend(x, method = "Spline", ...)
+  }
+  
   out <- list()
   out$rwi <- xd
   
@@ -284,6 +311,7 @@ do_garch <- function(x) {
   arima_output <- list()
   volatility_output <- list()
   
+  pb <- txtProgressBar(min = 0, max = n_series, style = 3)
   for (i in 1:n_series) {
     series <- xd[ ,i]
     .name <- .names[i]
@@ -344,7 +372,12 @@ do_garch <- function(x) {
                                            vol = NA_real_)
       colnames(volatility_output[[i]])[2] <- .name
     }
+    # Update the progress bar
+    setTxtProgressBar(pb, i)
   }
+  
+  close(pb)
+  
   out$arima_models <- arima_models
   arima_output <- Reduce(merge, arima_output)
   rownames(arima_output) <- arima_output$year
@@ -357,12 +390,13 @@ do_garch <- function(x) {
   out$garch_models <- garch_models
   return(out)
 }
-
 # Run
 vs_garch <- do_garch(x = trw_df)
 vs_vol <- vs_garch$volatility
 vs_vol <- vs_vol[, !sapply(vs_vol, anyNA)]
 vs_vol$Year <- rownames(vs_vol)
+vs_vol <- vs_vol %>% 
+  relocate(Year)
 
 #### 7. Volatility Plot ####
 
@@ -379,9 +413,70 @@ lay <- rbind(c(1, 2),c(1, 2),
              c(3, 3))
 
 vs_plots <- grid.arrange(vs_rwi, vs_volplot, vs_rc, nrow = 2, layout_matrix = lay, 
-                            top = textGrob("Sigmoidal VSLite Plots (Nettlebed, UK)"
+                            top = textGrob("Quadratic VSLite Plots (Lady Park, UK)"
                                            ,gp=gpar(fontsize = 20,font = 1)))
 
-ggsave(filename = "Sigmoidal VSLite Volatility Plots, Nettlebed UK.png", vs_plots, 
+ggsave(filename = "Quadratic VSLite Volatility Plots, Lady Park UK.png", vs_plots, 
        dpi = 500, device = "png", width = 10, height = 6,
        path = "C:/Users/User/Local Documents/R_Data/Graphs/GARCH Paper")
+
+#### 8. Analyse Time-Varying Volatility
+
+# Formatting 
+vs_vol <- vs_vol %>% 
+  select(-Year)
+
+trw_df_subset <- trw_df %>% 
+  select(all_of(names(vs_vol)))
+
+# Assuming your data frames are named 'ring_widths' and 'volatility_trends'
+# Set the volatility threshold
+volatility_threshold <- 1.5  # Adjust this value as needed
+
+# Create a data frame with high volatility series
+high_volatility_df <- trw_df_subset %>%
+  select(which(apply(vs_vol, 2, function(col) any(col > volatility_threshold))))
+
+# Create a data frame with non-high-volatility series
+non_high_volatility_df <- trw_df_subset %>%
+  select(-names(high_volatility_df))
+
+# Function to calculate coefficient of variation
+calc_cv <- function(x) {
+  (sd(x, na.rm = TRUE) / mean(x, na.rm = TRUE)) * 100
+}
+
+# Calculate CV for each series in high volatility dataframe
+high_vol_cv <- apply(high_volatility_df, 2, calc_cv)
+
+# Calculate CV for each series in non-high-volatility dataframe
+non_high_vol_cv <- apply(non_high_volatility_df, 2, calc_cv)
+
+# Calculate average CV for each dataframe
+avg_cv_high <- mean(high_vol_cv, na.rm = TRUE)
+avg_cv_non_high <- mean(non_high_vol_cv, na.rm = TRUE)
+
+# Print results
+cat("Average CV for high volatility series:", round(avg_cv_high, 2), "%\n")
+cat("Average CV for non-high-volatility series:", round(avg_cv_non_high, 2), "%\n")
+
+# Calculate the difference in average CV
+cv_difference <- avg_cv_high - avg_cv_non_high
+cat("Difference in average CV:", round(cv_difference, 2), "percentage points\n")
+
+
+# Find the lowest CV in the high volatility dataframe
+highest_cv_high <- max(high_vol_cv, na.rm = TRUE)
+highest_cv_high_series <- names(high_vol_cv)[which.max(high_vol_cv)]
+
+# Find the highest CV in the non-high-volatility dataframe
+lowest_cv_non_high <- min(non_high_vol_cv, na.rm = TRUE)
+lowest_cv_non_high_series <- names(non_high_vol_cv)[which.min(non_high_vol_cv)]
+
+# Print results
+cat("Highest CV in high volatility series:", round(highest_cv_high, 2), "% (Series:", highest_cv_high_series, ")\n")
+cat("Lowest CV in non-high-volatility series:", round(lowest_cv_non_high, 2), "% (Series:", lowest_cv_non_high_series, ")\n")
+
+# Calculate the difference between these CVs
+cv_difference <- highest_cv_high - lowest_cv_non_high
+cat("Difference between highest high-volatility CV and lowest non-high-volatility CV:", round(cv_difference, 2), "percentage points\n")
