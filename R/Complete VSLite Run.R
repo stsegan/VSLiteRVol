@@ -6,7 +6,7 @@
   source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/daylength.factor.from.lat.R")
   source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/leakybucket.monthly.R")
   source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/leakybucket.submonthly.R")
-  source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/std.ramp.R")
+  source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/std.transition.ramp.R")
   source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/test.R")
   source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/param_est.r")
   source("https://raw.githubusercontent.com/stsegan/VSLiteRVol/master/R/sample_thresh_pars.r")
@@ -36,9 +36,9 @@ library(progress)
 #### 1. Filter for site climate data ####
 clim <- read_csv("C:/Users/User/Local Documents/R_Data/.csv & .xlsx/Climate/fagus_climate.csv")
 # view(fagus_meta)
-clim <- clim %>% filter(site_id == "NET") %>% 
+clim <- clim %>% filter(site_id == "BWS") %>% 
   select(month, year, tmp, pre)
-lat <- 51.57 # found in fagus_meta
+lat <- 52.17 # found in fagus_meta
 syear <- head(clim$year, n = 1)
 eyear <- tail(clim$year, n = 1)
 
@@ -82,117 +82,10 @@ eyear <- tail(clim$year, n = 1)
 }
 
 
-#### 2.5 Alterations to climate data #### 
-
-clim <- read_csv("C:/Users/User/Local Documents/R_Data/.csv & .xlsx/Climate/fagus_climate.csv")
-
-clim <- clim %>% filter(site_id == "NET") %>% 
-  select(month, year, tmp, pre)
-clim <- clim %>% 
-  mutate(num = c(1:length(year)))
-
-
-# Trend
-clim <- clim %>% 
-  mutate(trend = 0.5 + (0.001 * (num * sin(num) ^ 2)))
-
-
-# Plot
-plot_trend <- ggplot(clim, aes(x = num, y = trend)) +
-  geom_line(color = "dodgerblue4") +
-  labs(
-    title = "",
-    x = "Monthly observation",
-    y = "Trend Value"
-  ) +
-  theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25)
 
 
 
-# Induce trend on data
-clim <- clim %>%
-  mutate(trend_tmp = tmp * trend)
-clim <- clim %>% 
-  mutate(trend_pre = pre * trend)
-
-# Format Climate Data
-
-# trended temp
-{
-  trend_tmp <- clim %>% 
-    select(month, trend_tmp) %>% 
-    group_by(month) %>% 
-    arrange(.by_group = TRUE) %>% 
-    mutate(id = row_number()) %>% 
-    pivot_wider(names_from = month, values_from = trend_tmp)
-  
-  
-  trend_tmp <- trend_tmp %>% 
-    mutate(year = c(syear:eyear)) %>% 
-    relocate(year) %>% 
-    select(-c(id, year))
-  trend_tmp <- as.matrix(trend_tmp)
-  trend_tmp <- t(trend_tmp)
-  }
-
-# trended prec
-{
-  trend_pre <- clim %>% 
-    select(month, trend_pre) %>% 
-    group_by(month) %>% 
-    arrange(.by_group = TRUE) %>% 
-    mutate(id = row_number()) %>% 
-    pivot_wider(names_from = month, values_from = trend_pre)
-  
-  trend_pre <- trend_pre %>% 
-    mutate(year = c(syear:eyear)) %>% 
-    relocate(year) %>% 
-    select(-c(id, year))
-  trend_pre <- as.matrix(trend_pre)
-  trend_pre <- t(trend_pre)
-}
-
-
-
-plot_tmp <- clim %>% 
-  ggplot(aes(x = num, y = trend_tmp)) +
-  geom_point(col = "darkorchid3", alpha = 0.4) + 
-  geom_point(aes(x = num, y = tmp), colour = "goldenrod2", alpha = 0.4) +
-  labs(
-    title = "",
-    x = "Month",
-    y = "Mean Temperature (\u00B0C)"
-  ) +
-  theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25)
-
-plot_pre <- clim %>% 
-  ggplot(aes(x = num)) +
-  geom_point(aes(y = trend_pre, color = "Artificial"), alpha = 0.4) + 
-  geom_point(aes(y = pre, color = "Observed"), alpha = 0.4) +
-  labs(
-    title = "",
-    x = "Month",
-    y = "Total Monthly Precipitation (mm)"
-  ) +
-  scale_color_manual(values = c("Artificial" = "darkorchid3", "Observed" = "goldenrod2"),
-                     name = "Climate Variable") +
-  theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25)
-
-
-lay <- rbind(c(1, 2),c(1, 2),
-             c(3, 3))
-
-obs_art_clim <- grid.arrange(plot_tmp, plot_pre, plot_trend, nrow = 2, layout_matrix = lay, 
-             top = textGrob("Observed vs. Artificial Monthly Average Climate"
-                            ,gp=gpar(fontsize = 16,font = 1)))
-
-# ggsave(filename = "Observed vs. Artificial Monthly Average Climate.png", obs_art_clim, 
-#       dpi = 500, device = "png", width = 10, height = 6,
-#       path = "C:/Users/User/Local Documents/R_Data/Graphs/GARCH Paper")
-
-
-
-
+#### 3. VSLite runs ####
 
 #### 3. VSLite runs ####
 
@@ -201,21 +94,21 @@ vs_list <- list()
 trw_list <- list()
 k_lin <- seq(0.02, 10, by = 0.02)
 k_sig <- seq(0.02, 10, by = 0.02)
-year_transition <- 1950  # Define year of transition
+year_transition = 1950
 
 # Run - for non-climate run, need to change ramp function in VSLite.R.
 # For climate run, change Te and Pr to trend_tmp and trend_pre, with Linear ramp.
-for (i in 1:length(k_sig)) {
+nyrs <- length(syear:eyear)
+for (i in 1:nyrs){
+  year = i + syear - 1 
   vs_list[[i]] <- VSLite(syear = syear, eyear = eyear, phi = lat, Te = tmp,
-                         Pr = pre, year_transition = year_transition, k_lin = k_lin[i], 
-                         k_sig = k_sig[i], m_sig = 1)
+                         Pr = pre, year_transition = year_transition, k_lin = k_lin[1], k_sig = k_sig[1])
   
   trw_list[[i]] <- t(as.data.frame(vs_list[[i]]$trw))
 }
 
 # Formatting Output
 trw_df <- as.data.frame(trw_list)
-colnames(trw_df) <- m
 trw_transformed <- apply(trw_df, 2, function(x) x + abs(min(x)) + 0.001)
 trw_df <- as.data.frame(trw_transformed)
 
@@ -391,6 +284,7 @@ do_garch <- function(x, detrending = "gam", ...) {
   out$garch_models <- garch_models
   return(out)
 }
+
 # Run
 vs_garch <- do_garch(x = trw_df)
 vs_vol <- vs_garch$volatility
@@ -420,6 +314,16 @@ vs_plots <- grid.arrange(vs_rwi, vs_volplot, vs_rc, nrow = 2, layout_matrix = la
 ggsave(filename = "Quadratic VSLite Volatility Plots, Lady Park UK.png", vs_plots, 
        dpi = 500, device = "png", width = 10, height = 6,
        path = "C:/Users/User/Local Documents/R_Data/Graphs/GARCH Paper")
+
+
+
+
+
+
+
+
+
+
 
 #### 8. Analyse Time-Varying Volatility
 
@@ -481,3 +385,115 @@ cat("Lowest CV in non-high-volatility series:", round(lowest_cv_non_high, 2), "%
 # Calculate the difference between these CVs
 cv_difference <- highest_cv_high - lowest_cv_non_high
 cat("Difference between highest high-volatility CV and lowest non-high-volatility CV:", round(cv_difference, 2), "percentage points\n")
+
+
+#### 2.5 Alterations to climate data #### 
+
+clim <- read_csv("C:/Users/User/Local Documents/R_Data/.csv & .xlsx/Climate/fagus_climate.csv")
+
+clim <- clim %>% filter(site_id == "NET") %>% 
+  select(month, year, tmp, pre)
+clim <- clim %>% 
+  mutate(num = c(1:length(year)))
+
+
+# Trend
+clim <- clim %>% 
+  mutate(trend = 0.5 + (0.001 * (num * sin(num) ^ 2)))
+
+
+# Plot
+plot_trend <- ggplot(clim, aes(x = num, y = trend)) +
+  geom_line(color = "dodgerblue4") +
+  labs(
+    title = "",
+    x = "Monthly observation",
+    y = "Trend Value"
+  ) +
+  theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25)
+
+
+
+# Induce trend on data
+clim <- clim %>%
+  mutate(trend_tmp = tmp * trend)
+clim <- clim %>% 
+  mutate(trend_pre = pre * trend)
+
+# Format Climate Data
+
+# trended temp
+{
+  trend_tmp <- clim %>% 
+    select(month, trend_tmp) %>% 
+    group_by(month) %>% 
+    arrange(.by_group = TRUE) %>% 
+    mutate(id = row_number()) %>% 
+    pivot_wider(names_from = month, values_from = trend_tmp)
+  
+  
+  trend_tmp <- trend_tmp %>% 
+    mutate(year = c(syear:eyear)) %>% 
+    relocate(year) %>% 
+    select(-c(id, year))
+  trend_tmp <- as.matrix(trend_tmp)
+  trend_tmp <- t(trend_tmp)
+  }
+
+# trended prec
+{
+  trend_pre <- clim %>% 
+    select(month, trend_pre) %>% 
+    group_by(month) %>% 
+    arrange(.by_group = TRUE) %>% 
+    mutate(id = row_number()) %>% 
+    pivot_wider(names_from = month, values_from = trend_pre)
+  
+  trend_pre <- trend_pre %>% 
+    mutate(year = c(syear:eyear)) %>% 
+    relocate(year) %>% 
+    select(-c(id, year))
+  trend_pre <- as.matrix(trend_pre)
+  trend_pre <- t(trend_pre)
+}
+
+
+
+plot_tmp <- clim %>% 
+  ggplot(aes(x = num, y = trend_tmp)) +
+  geom_point(col = "darkorchid3", alpha = 0.4) + 
+  geom_point(aes(x = num, y = tmp), colour = "goldenrod2", alpha = 0.4) +
+  labs(
+    title = "",
+    x = "Month",
+    y = "Mean Temperature (\u00B0C)"
+  ) +
+  theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25)
+
+plot_pre <- clim %>% 
+  ggplot(aes(x = num)) +
+  geom_point(aes(y = trend_pre, color = "Artificial"), alpha = 0.4) + 
+  geom_point(aes(y = pre, color = "Observed"), alpha = 0.4) +
+  labs(
+    title = "",
+    x = "Month",
+    y = "Total Monthly Precipitation (mm)"
+  ) +
+  scale_color_manual(values = c("Artificial" = "darkorchid3", "Observed" = "goldenrod2"),
+                     name = "Climate Variable") +
+  theme_cowplot(font_size = 10, rel_small = 0.75, rel_large = 1.25)
+
+
+lay <- rbind(c(1, 2),c(1, 2),
+             c(3, 3))
+
+obs_art_clim <- grid.arrange(plot_tmp, plot_pre, plot_trend, nrow = 2, layout_matrix = lay, 
+                             top = textGrob("Observed vs. Artificial Monthly Average Climate"
+                                            ,gp=gpar(fontsize = 16,font = 1)))
+
+# ggsave(filename = "Observed vs. Artificial Monthly Average Climate.png", obs_art_clim, 
+#       dpi = 500, device = "png", width = 10, height = 6,
+#       path = "C:/Users/User/Local Documents/R_Data/Graphs/GARCH Paper")
+
+
+

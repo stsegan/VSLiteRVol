@@ -48,88 +48,85 @@ VSLite <- function(syear, eyear, phi, Te, Pr, year_transition, k_lin, k_sig, m_s
                    T1 = 8, T2 = 23, M1 = .01, M2 = .05,
                    Mmax = 0.76, Mmin = 0.01, alph = 0.093,
                    m.th = 4.886, mu.th = 5.8, rootd = 1000, M0 = .2,
-                   substep = 0, I_0 = 1, I_f = 12, hydroclim = "P"){
+                   substep = 0, I_0 = 1, I_f = 12, hydroclim = "P") {
+  
   #############################################################################
   nyrs <- length(syear:eyear)
-  Gr <- gT <- gM <- M <- potEv <- matrix(NA,12,nyrs);
+  Gr <- gT <- gM <- M <- potEv <- matrix(NA, 12, nyrs)
   #############################################################################
   
   ## Load in soil moisture, or estimate it with the Leaky Bucket model:
-  if(hydroclim == "M"){
+  if (hydroclim == "M") {
     ## Read in soil moisture:
-    M = P;
-  }else{# Compute soil moisture:
-    if(substep == 1){
-      M <- leakybucket.submonthly(syear,eyear,phi,Te,Pr,
-                                  Mmax,Mmin,alph,m.th,mu.th,rootd,M0);
-    }else{
-      M <- leakybucket.monthly(syear,eyear,phi,Te,Pr,
-                               Mmax,Mmin,alph,m.th,mu.th,rootd,M0);
-    }
-    if(substep !=1 && substep != 0){
-      cat("'substep' param must either be set to 1 or 0.");
-      return
+    M <- P
+  } else { # Compute soil moisture:
+    if (substep == 1) {
+      M <- leakybucket.submonthly(syear, eyear, phi, Te, Pr,
+                                  Mmax, Mmin, alph, m.th, mu.th, rootd, M0)
+    } else {
+      M <- leakybucket.monthly(syear, eyear, phi, Te, Pr,
+                               Mmax, Mmin, alph, m.th, mu.th, rootd, M0)
+      if (substep != 1 && substep != 0) {
+        cat("'substep' param must either be set to 1 or 0.")
+        return
+      }
     }
   }
   
   # Compute gE, the scaled monthly proxy for insolation:
-  gE <- compute.gE(phi);
+  gE <- compute.gE(phi)
   
   #############################################################################
   ### Calculate Growth Response functions gT and gM
   
-  # Make sure here to add/remove k & m depending on ramp type (for both gT & gM). 
-  
   # Temperature growth response:
-  gT <- std.ramp.transition(Te, T1, T2, year_transition, syear, eyear, k_lin, k_sig, m_sig)
+  gT <- std.ramp.transition(Te, T1, T2, year, syear, eyear, k_lin, k_sig, m_sig)
   
   # Soil moisture growth response:
-  gM <- std.ramp.transition(M, M1, M2, year_transition, syear, eyear, k_lin, k_sig, m_sig)
+  gM <- std.ramp.transition(M, M1, M2, year, syear, eyear, k_lin, k_sig, m_sig)
   
   # Compute overall growth rate:
-  Gr <- kronecker(matrix(1,1,nyrs),gE)*pmin(gT,gM)
- 
+  Gr <- kronecker(matrix(1, 1, nyrs), gE) * pmin(gT, gM)
+  
   ############## Compute proxy quantity from growth responses #################
-  width <- matrix(NA,nyrs,1);
-  if (phi>0){ # Site in Northern Hemisphere:
-    if (I_0<0){ # if we include part of the previous year in each year's modeled growth:
-      startmo <- 13+I_0;
-      endmo <- I_f;
+  width <- matrix(NA, nyrs, 1)
+  if (phi > 0) { # Site in Northern Hemisphere:
+    if (I_0 < 0) { # if we include part of the previous year in each year's modeled growth:
+      startmo <- 13 + I_0
+      endmo <- I_f
+      
       # use average of growth data across modeled years to estimate first year's growth due
       # to previous year:
-      width[1] <- sum(Gr[1:endmo,1]) + sum(rowMeans(Gr[startmo:12,]));
-      for(cyear in 2:nyrs){
-        width[cyear] <- colSums(Gr[startmo:12,cyear-1]) + colSums(Gr[1:endmo,cyear]);
+      width[1] <- sum(Gr[1:endmo, 1]) + sum(rowMeans(Gr[startmo:12, ]))
+      for (cyear in 2:nyrs) {
+        width[cyear] <- colSums(Gr[startmo:12, cyear - 1]) + colSums(Gr[1:endmo, cyear])
       }
-    }else{ # no inclusion of last year's growth conditions in estimates of this year's growth:
-      startmo <- I_0+1;
-      endmo <- I_f;
-      width <- colSums(Gr[startmo:endmo,])
+    } else { # no inclusion of last year's growth conditions in estimates of this year's growth:
+      startmo <- I_0 + 1
+      endmo <- I_f
+      width <- colSums(Gr[startmo:endmo, ])
     }
   }
-  if(phi<0){ # if site is in the Southern Hemisphere:
+  
+  if (phi < 0) { # if site is in the Southern Hemisphere:
     # (Note: in the Southern Hemisphere, ring widths are dated to the year in which growth began!)
-    startmo <- 7+I_0; # (eg. I_0 = -4 in SH corresponds to starting integration in March of cyear)
-    endmo <- I_f-6; # (eg. I_f = 12 in SH corresponds to ending integration in June of next year)
-    for (cyear in 1:(nyrs-1)){
-      width(cyear) <- sum(Gr[startmo:12,cyear]) + sum(Gr[1:endmo,cyear+1]);
+    startmo <- 7 + I_0 # (eg. I_0 = -4 in SH corresponds to starting integration in March of cyear)
+    endmo <- I_f - 6 # (eg. I_f = 12 in SH corresponds to ending integration in June of next year)
+    for (cyear in 1:(nyrs - 1)) {
+      width(cyear) <- sum(Gr[startmo:12, cyear]) + sum(Gr[1:endmo, cyear + 1])
     }
     # use average of growth data across modeled years to estimate last year's growth due
     # to the next year:
-    width[nyrs] <- sum(Gr[startmo:12,nyrs])+sum(rowMeans(Gr[1:endmo,]));
+    width[nyrs] <- sum(Gr[startmo:12, nyrs]) + sum(rowMeans(Gr[1:endmo, ]))
   }
   
   # Simulated proxy series standardized width:
-  trw <- t((width-mean(width))/sd(width)); 
-
+  trw <- t((width - mean(width)) / sd(width))
+  
   #############################################################################
+  
   # Return output:
   out <- list(trw = trw, gT = gT, gM = gM, gE = gE, M = M, potEv = potEv,
               sample.mean.width = mean(width), sample.std.width = sd(width))
   return(out)
-
 }
-
-
-
-
