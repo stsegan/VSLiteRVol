@@ -66,6 +66,35 @@ std.ramp.sig <- function(x, x1, x2, k, m) {
   )
 }
 
+
+# Transition Function: Linear to Sigmoid
+std.ramp.transition <- function(x, x1, x2, x_transition, k_lin, k_sig, m_sig) {
+  
+  # Define the linear part
+  linear_part <- k_lin * ((x - x1) / (x2 - x1))
+  
+  # Define the sigmoid part
+  sigmoid_part <- m_sig * (1 / (1 + exp(-k_sig * (x - x1) / (x2 - x1))))
+  
+  # Define the weight for the transition
+  # The weight smoothly transitions from 0 to 1 around the transition point
+  transition_width <- (x2 - x1) * 0.1  # Adjust this for smoother or sharper transitions
+  weight <- 1 / (1 + exp(-10 * (x - x_transition) / transition_width))
+  
+  # Combine the two parts using the weight
+  combined_response <- (1 - weight) * linear_part + weight * sigmoid_part
+  
+  # Ensure the response is bounded between 0 and 1
+  return(
+    apply(
+      as.matrix(
+        apply(combined_response, 1:length(dim(x)), min, 1)
+      ),
+      1:length(dim(x)), max, 0
+    )
+  )
+}
+
 # Where k = gradient/steepness of slope, m = height of slope.
 # Would have to change gT/gM to include k and m values. 
 # Need to configure this to either build a 'master function' which includes
