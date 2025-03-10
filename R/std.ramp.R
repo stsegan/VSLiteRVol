@@ -20,7 +20,8 @@ std.ramp <- function(x,x1,x2){return(
     ),
     1:length(dim(x)), max, 0
   )
-)}
+)
+}
 
 # Linear
 std.ramp.lin <- function(x, x1, x2, k){return(
@@ -83,7 +84,7 @@ std.ramp.transition <- function(x, x1, x2, year, syear, eyear, k_lin, k_sig, m_s
   
   # Define the weight for the transition
   # The weight smoothly transitions from 0 to 1 around the transition point
-  transition_width <- 0.1  # Adjust this for smoother or sharper transitions
+  transition_width <- 0.001  # Adjust this for smoother or sharper transitions
   weight <- 1 / (1 + exp(-10 * (year_index - year) / transition_width))
   
   # Combine the two parts using the weight
