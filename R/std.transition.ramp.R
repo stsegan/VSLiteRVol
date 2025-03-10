@@ -10,45 +10,18 @@
 #'
 #' @export
 
-# Base VSLite Ramp
-std.ramp <- function(x,x1,x2){return(
-  apply(
-    as.matrix(
-      apply(
-        (x-x1)/(x2-x1), 1:length(dim(x)), min, 1
-      )
-    ),
-    1:length(dim(x)), max, 0
-  )
-)}
-
 # Linear
 std.ramp.lin <- function(x, x1, x2, k_lin){return(
   apply(
     as.matrix(
       apply(
-        k * ((x-x1)/(x2-x1)), 1:length(dim(x)), min, 1
+        k_lin * ((x-x1)/(x2-x1)), 1:length(dim(x)), min, 1
       )
     ),
     1:length(dim(x)), max, 0
   )
 )}
 
-# Quadratic
-std.ramp.quad <- function(x, x1, x2, k, m) {
-  linear_part <- (x - x1) / (x2 - x1)
-  quadratic_part <- m*((linear_part)^k)
-  return(
-    apply(
-      as.matrix(
-        apply(
-          quadratic_part, 1:length(dim(x)), min, 1
-        )
-      ),
-      1:length(dim(x)), max, 0
-    )
-  )
-}
 
 # Sigmoid
 std.ramp.sig <- function(x, x1, x2, k_sig, m_sig) {
