@@ -44,7 +44,7 @@ std.ramp.sig <- function(x, x1, x2, k, m) {
 # version here: second version: years <- syear:eyear
 std.ramp.transition <- function(x, x1, x2, years, year_transition, k_lin, k_sig, m_sig) {
   # compute both ramp functions
-  sig <- std.ramp.sigstd.ramp.sig(x, x1, x2, k_sig, m_sig)
+  sig <- std.ramp.sig(x, x1, x2, k_sig, m_sig)
   lin <- std.ramp.lin(x, x1, x2, k_lin)
   # create output based on cutoff year
   cut_off_index <- which(years == year_transition)
