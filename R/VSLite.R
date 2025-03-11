@@ -44,7 +44,7 @@
 ####################################################################################################
 
 
-VSLite <- function(syear, eyear, phi, Te, Pr, year_transition, year, k_lin, k_sig, m_sig,
+VSLite <- function(syear, eyear, phi, Te, Pr, year_transition, k_lin, k_sig, m_sig,
                    T1 = 8, T2 = 23, M1 = .01, M2 = .05,
                    Mmax = 0.76, Mmin = 0.01, alph = 0.093,
                    m.th = 4.886, mu.th = 5.8, rootd = 1000, M0 = .2,
@@ -52,6 +52,7 @@ VSLite <- function(syear, eyear, phi, Te, Pr, year_transition, year, k_lin, k_si
   
   #############################################################################
   nyrs <- length(syear:eyear)
+  years <- syear:eyear
   Gr <- gT <- gM <- M <- potEv <- matrix(NA, 12, nyrs)
   #############################################################################
   
@@ -80,10 +81,10 @@ VSLite <- function(syear, eyear, phi, Te, Pr, year_transition, year, k_lin, k_si
   ### Calculate Growth Response functions gT and gM
   
   # Temperature growth response:
-  gT <- std.ramp.transition(Te, T1, T2, year, year_transition, m_sig, k_lin, k_sig)
+  gT <- std.ramp.transition(Te, T1, T2, years, year_transition, m_sig, k_lin, k_sig)
   
   # Soil moisture growth response:
-  gM <- std.ramp.transition(M, M1, M2, year, year_transition, m_sig, k_lin, k_sig)
+  gM <- std.ramp.transition(M, M1, M2, years, year_transition, m_sig, k_lin, k_sig)
   
   # Compute overall growth rate:
   Gr <- kronecker(matrix(1, 1, nyrs), gE) * pmin(gT, gM)
