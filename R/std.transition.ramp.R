@@ -42,7 +42,7 @@ std.ramp.sig <- function(x, x1, x2, k, m) {
 # Transition Function: Linear to Sigmoid
 # year_transition: either as an index OR as "real" year, and additionally pass on syear:eyear vector
 # version here: second version: years <- syear:eyear
-std.ramp.transition <- function(x, x1, x2, years, year_transition,  m_sig, k_lin, k_sig,) {
+std.ramp.transition <- function(x, x1, x2, years, year_transition, m_sig, k_lin, k_sig) {
   # compute both ramp functions
   sig <- std.ramp.sig(x, x1, x2, k_sig, m_sig)
   lin <- std.ramp.lin(x, x1, x2, k_lin)
