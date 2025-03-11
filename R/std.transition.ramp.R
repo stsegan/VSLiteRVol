@@ -40,15 +40,16 @@ std.ramp.sig <- function(x, x1, x2, k, m) {
 }
 
 # Transition Function: Linear to Sigmoid
-std.ramp.transition <- function(x, x1, x2, year, year_transition, k_lin, k_sig, m_sig) {
-  # Determine which function to use based on the year
-  if (year < year_transition) {
-    # Linear part
-    response <- std.ramp.lin(x, x1, x2, k_lin)
-  } else {
-    # Sigmoid part
-    response <- std.ramp.sig(x, x1, x2, k_sig, m_sig)
-  }
-  
+# year_transition: either as an index OR as "real" year, and additionally pass on syear:eyear vector
+# version here: second version: years <- syear:eyear
+std.ramp.transition <- function(x, x1, x2, years, year_transition, k_lin, k_sig, m_sig) {
+  # compute both ramp functions
+  sig <- std.ramp.sigstd.ramp.sig(x, x1, x2, k_sig, m_sig)
+  lin <- std.ramp.lin(x, x1, x2, k_lin)
+  # create output based on cutoff year
+  cut_off_index <- which(years == year_transition)
+  response <- numeric(length(years))
+  response[1:cut_off_index] <- sig[1:cut_off_index]
+  response[(cut_off_index + 1):length(years)] <- lin[(cut_off_index + 1):length(years)]
   return(response)
 }
