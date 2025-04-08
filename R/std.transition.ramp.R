@@ -48,8 +48,8 @@ std.ramp.transition <- function(x, x1, x2, years, year_transition, m_sig, k_lin,
   lin <- std.ramp.lin(x, x1, x2, k_lin)
   # create output based on cutoff year
   cut_off_index <- which(years == year_transition)
-  response <- numeric(length(years))
-  response[1:cut_off_index] <- sig[1:cut_off_index]
-  response[(cut_off_index + 1):length(years)] <- lin[(cut_off_index + 1):length(years)]
+  response <- matrix(nrow = 12, ncol = length(years))
+  response[,1:cut_off_index] <- sig[,1:cut_off_index]
+  response[,(cut_off_index + 1):length(years)] <- lin[,(cut_off_index + 1):length(years)]
   return(response)
 }
