@@ -24,9 +24,35 @@ std.ramp.lin <- function(x, x1, x2, k){return(
 
 
 # Sigmoid
-std.ramp.sig <- function(x, x1, x2, k, m) {
+std.ramp.sig <- function(x, x1, x2, k) {
   linear_part <- (x - x1) / (x2 - x1)
-  sigmoid_part <- m * (1 / (1 + exp(-k * (x - x1) / (x2 - x1))))
+  sigmoid_part <- (1 / (1 + exp(-k * (x - x1) / (x2 - x1))))
+  return(
+    apply(
+      as.matrix(
+        apply(
+          sigmoid_part, 1:length(dim(x)), min, 1
+        )
+      ),
+      1:length(dim(x)), max, 0
+    )
+  )
+}
+
+std.ramp <- function(x, x1, x2){return(
+  apply(
+    as.matrix(
+      apply(
+        (x-x1)/(x2-x1), 1:length(dim(x)), min, 1
+      )
+    ),
+    1:length(dim(x)), max, 0
+  )
+)}
+
+std.ramp.sig2 <- function(x, x1, x2, k) {
+  linear_part <- (x - x1) / (x2 - x1)
+  sigmoid_part <- (1 / (1 + exp(-k * (x - x1) / (x2 - x1))))
   return(
     apply(
       as.matrix(
@@ -42,14 +68,29 @@ std.ramp.sig <- function(x, x1, x2, k, m) {
 # Transition Function: Linear to Sigmoid
 # year_transition: either as an index OR as "real" year, and additionally pass on syear:eyear vector
 # version here: second version: years <- syear:eyear
-std.ramp.transition <- function(x, x1, x2, years, year_transition, m_sig, k_lin, k_sig) {
+std.ramp.transition <- function(x, x1, x2, years, year_transition, k_lin, k_sig) { # klin
   # compute both ramp functions
-  sig <- std.ramp.sig(x, x1, x2, k_sig, m_sig)
+  sig <- std.ramp.sig(x, x1, x2, k_sig)
   lin <- std.ramp.lin(x, x1, x2, k_lin)
   # create output based on cutoff year
   cut_off_index <- which(years == year_transition)
   response <- matrix(nrow = 12, ncol = length(years))
-  response[,1:cut_off_index] <- sig[,1:cut_off_index]
-  response[,(cut_off_index + 1):length(years)] <- lin[,(cut_off_index + 1):length(years)]
+  response[,1:cut_off_index] <- lin[,1:cut_off_index]
+  response[,(cut_off_index + 1):length(years)] <- sig[,(cut_off_index + 1):length(years)]
+  return(response)
+}
+
+std.ramp.transition2<- function(x, x1, x2, years, year_transition, k_lin, k_sig, window = 5) {
+  sig <- std.ramp.sig(x, x1, x2, k_sig)
+  lin <- std.ramp.lin(x, x1, x2, k_lin)
+  blend <- rep(0, length(years))
+  idx <- which(years >= (year_transition - window/2) & years <= (year_transition + window/2))
+  blend[idx] <- seq(0, 1, length.out = length(idx))
+  response <- lin
+  for (i in seq_along(idx)) {
+    col <- idx[i]
+    response[, col] <- (1 - blend[col]) * lin[, col] + blend[col] * sig[, col]
+  }
+  response[, (max(idx)+1):length(years)] <- sig[, (max(idx)+1):length(years)]
   return(response)
 }
